@@ -1,0 +1,42 @@
+{
+  "name": "autostereogram",
+  "kind": "consumer",
+  "summary": "SIRDS / Magic Eye generator. A repeating-pattern field hides a 3D depth map; the brain fuses it wall-eyed. Depth is encoded as a horizontal shift of the pattern.",
+  "tagline": "the pattern is the wallpaper. the wallpaper is the depth. the depth is the magic.",
+  "build_route": {
+    "primary": "gpu-per-pixel-pattern-shift",
+    "fallback": "cpu-true-sirds-thimbleby-inglis-witten",
+    "note": "true SIRDS is row-sequential (left-to-right linking), awkward on pure GPU. GPU approximation looks right ~90% of the time; CPU path is for export-quality stills."
+  },
+  "math": {
+    "depth_map": "z(x,y) in [0,1]",
+    "separation": "sep = E * (1 - mu*z) / (2 - mu*z)",
+    "sample": "pattern(uv.x - accumulatedShift, uv.y)",
+    "pattern_period_E": 128,
+    "depth_scale_mu": 0.4
+  },
+  "engines": {
+    "depth_sources": ["sdf-shape", "raymarch-depth", "noise-terrain"],
+    "pattern_sources": ["random_dots", "tiled_image", "animated_noise"]
+  },
+  "parameters": {
+    "pattern_period": { "standard": 128, "shallow": 64, "deep": 256 },
+    "depth_scale": { "standard": 0.4, "subtle": 0.2, "extreme": 0.8 },
+    "pattern_source": ["random_dots", "tiled_image", "animated_noise"],
+    "animate": [true, false]
+  },
+  "aesthetics": {
+    "classic_dots": { "palette": ["#000000", "#ffffff"], "pattern": "random_dots" },
+    "lisa_frank_hidden": { "palette": ["#ff00cc", "#00ffcc", "#ffff00", "#ff6600"], "pattern": "tiled_image", "consumes": "lisa_frank_aesthetic" },
+    "breathing_glyph": { "palette": ["#0a001a", "#8338ec", "#ff006e", "#ffbe0b"], "pattern": "animated_noise", "animate": true }
+  },
+  "ecosystem": {
+    "consumes": ["sdf_fields", "raymarching", "*_aesthetic", "*_patterns"],
+    "pairs_with": ["op_art_style", "moire"]
+  },
+  "viewing": {
+    "default": "wall-eyed (parallel / diverged)",
+    "also": "cross-eyed (inverts depth)",
+    "guide": "README.md#how-to-view"
+  }
+}
