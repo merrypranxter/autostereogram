@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autostereogram — the pattern is the depth</title>
+    <style>
+      :root {
+        --bg: #0a001a;
+        --panel: #14092b;
+        --ink: #e8e0ff;
+        --accent: #ff006e;
+        --accent2: #8338ec;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        height: 100vh;
+        overflow: hidden;
+      }
+      aside {
+        background: var(--panel);
+        padding: 1.25rem;
+        overflow-y: auto;
+        border-right: 1px solid #2a1750;
+      }
+      h1 {
+        font-size: 1.05rem;
+        margin: 0 0 0.25rem;
+        background: linear-gradient(90deg, #ff00cc, #00ffcc, #ffff00, #ff6600);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .sub { font-size: 0.7rem; opacity: 0.6; margin: 0 0 1.25rem; line-height: 1.5; }
+      .field { margin-bottom: 1rem; }
+      label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; margin-bottom: 0.35rem; }
+      select, input[type="range"] { width: 100%; }
+      select {
+        background: #0d0420; color: var(--ink); border: 1px solid #2a1750;
+        padding: 0.4rem; border-radius: 6px; font-family: inherit; font-size: 0.8rem;
+      }
+      .val { float: right; opacity: 0.9; color: #00ffcc; }
+      .check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+      .check label { margin: 0; text-transform: none; letter-spacing: 0; opacity: 1; }
+      button {
+        width: 100%; padding: 0.55rem; margin-top: 0.4rem; border: none; border-radius: 6px;
+        font-family: inherit; font-weight: 600; cursor: pointer; color: #fff;
+      }
+      #export { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+      #reseed { background: #2a1750; }
+      .note { font-size: 0.66rem; opacity: 0.55; line-height: 1.6; margin-top: 1.25rem; border-top: 1px solid #2a1750; padding-top: 0.9rem; }
+      main { position: relative; }
+      canvas { width: 100%; height: 100%; display: block; }
+      @media (max-width: 720px) {
+        body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h1>autostereogram</h1>
+      <p class="sub">SIRDS / Magic Eye. the pattern is the wallpaper. the wallpaper is the depth. the depth is the magic.</p>
+
+      <div class="field">
+        <label for="engine">depth engine</label>
+        <select id="engine">
+          <option value="sdf-shape">sdf-shape</option>
+          <option value="raymarch-depth">raymarch-depth</option>
+          <option value="noise-terrain">noise-terrain</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="shape">sdf shape</label>
+        <select id="shape">
+          <option value="0">sphere</option>
+          <option value="1">torus</option>
+          <option value="2">rounded box</option>
+          <option value="3">eye glyph</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="aesthetic">aesthetic</label>
+        <select id="aesthetic">
+          <option value="classic">classic dots</option>
+          <option value="lisa_frank">lisa frank hidden</option>
+          <option value="neon_noise">breathing glyph</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="pattern">pattern source</label>
+        <select id="pattern">
+          <option value="random_dots">random dots</option>
+          <option value="tiled_image">tiled image</option>
+          <option value="animated_noise">animated noise</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="E">pattern period E <span class="val" id="E-val">128px</span></label>
+        <input type="range" id="E" min="48" max="256" step="4" value="128" />
+      </div>
+
+      <div class="field">
+        <label for="mu">depth scale μ <span class="val" id="mu-val">0.40</span></label>
+        <input type="range" id="mu" min="0.1" max="0.9" step="0.05" value="0.4" />
+      </div>
+
+      <div class="field check">
+        <input type="checkbox" id="animate" />
+        <label for="animate">animate (breathing)</label>
+      </div>
+
+      <div class="field check">
+        <input type="checkbox" id="guides" checked />
+        <label for="guides">convergence dots</label>
+      </div>
+
+      <button id="export">export true SIRDS (CPU) →</button>
+      <button id="reseed">reseed pattern</button>
+
+      <p class="note">
+        <strong>how to view (wall-eyed):</strong> relax your eyes as if looking
+        <em>through</em> the screen at something far away. let the two dots at the
+        top drift into three; lock the middle one. the hidden shape rises. cross-eyed
+        works too — it just inverts the depth. the guide is the fun. the fun is the
+        magic. the magic is the eye. the eye is the brain. the brain is the fusion.
+      </p>
+    </aside>
+
+    <main>
+      <canvas id="gl"></canvas>
+    </main>
+
+    <script type="module" src="./src/js/main.js"></script>
+  </body>
+</html>

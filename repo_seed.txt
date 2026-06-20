@@ -1,0 +1,85 @@
+# autostereogram
+
+> magic eye. SIRDS — single image random dot stereogram. a repeating-pattern field hides a 3D depth map; the brain fuses it wall-eyed. depth gets encoded as a horizontal shift of the pattern. include a "how to view" note in the README, it's half the fun.
+
+**Build-route flag:** true SIRDS is **row-sequential** (left→right linking constraint), awkward on pure GPU. Practical route = per-pixel pattern-shift approximation (GPU-friendly, looks right). Document the CPU "true SIRDS" fallback.
+
+## The Math
+
+depth map `z(x,y) ∈ [0,1]`. pattern repeats horizontally with period `E` ≈ eye separation in pixels (~128). the shift at each pixel is `sep = E * (1 - μ*z) / (2 - μ*z)`. `μ` is the depth scale (~0.4). the pattern is sampled at `uv.x - accumulatedShift`. the brain fuses the shifted repeats, sees depth.
+
+the row-sequential algorithm: Thimbleby-Inglis-Witten. for each row, scan left to right. maintain a linked list of pixels that should have the same pattern. if two pixels should be the same, link them. if the link conflicts, break it. this is the true SIRDS. the GPU approximation skips the linking, does per-pixel shift. it looks right 90% of the time. the CPU fallback is the true.
+
+the pattern sources: random dots (monochrome, the classic), tiled colorful image (SIS, the pretty), animated noise (the living). the pattern is the wallpaper. the wallpaper is the depth. the depth is the magic.
+
+## The Art
+
+**classic_dots** — monochrome random-dot, hidden shape, `E=128`. the dots are the noise. the noise is the pattern. the pattern is the wallpaper. the wallpaper is the depth. the shape is a sphere, a torus, a text glyph. the wall-eyed is the trick. the trick is the magic. the magic is the eye. the eye is the brain. the brain is the fusion.
+
+**lisa_frank_hidden** — vivid tiled pattern as the SIS texture, hidden glyph. the pattern is lisa frank. the frank is the rainbow. the rainbow is the leopard. the leopard is the dolphin. the dolphin is the heart. the heart is the depth. the depth is the magic. the magic is the eye. the eye is the wall-eyed. the wall-eyed is the fusion. the fusion is the 90s. the 90s are the nostalgia. the nostalgia is the pattern. (consumes `lisa_frank_aesthetic`.)
+
+**breathing_glyph** — animated depth, slow pulse, wiggle-stereogram. the depth is alive. the glyph is breathing. the pulse is the heart. the wiggle is the dance. the animation is the time. the time is the depth. the depth is the magic. the magic is the eye. the eye is the wall-eyed. the wall-eyed is the fusion. the fusion is the living.
+
+## File Tree
+
+```
+autostereogram/
+├── README.md
+├── repo_seed.txt
+├── context.manifest.json
+├── .gitignore
+├── index.html
+├── src/
+│ ├── js/
+│ │ ├── main.js
+│ │ ├── sirds-cpu.js # true row-linking SIRDS fallback (accurate)
+│ │ └── pattern-sources.js # noise | tiled image | her style repos
+│ └── shaders/
+│ ├── depth/ # swappable depth-map engines
+│ │ ├── sdf-shape.glsl
+│ │ ├── raymarch-depth.glsl
+│ │ └── noise-terrain.glsl
+│ ├── depth.frag # render depth map z(x,y) ∈ [0,1] → FBO
+│ ├── stereogram.frag # per-pixel pattern lookup + horizontal depth shift
+│ └── post-process.frag
+└── docs/
+ ├── math-reference.md
+ └── visual-targets.md
+```
+
+## Engines (Depth-Map Sources)
+
+- **sdf-shape** — render an SDF (sphere, torus, text, glyph) as depth. the shape is the secret. the secret is the depth. the depth is the magic.
+- **raymarch-depth** — depth channel of a raymarched 3D scene. the scene is the world. the world is the depth. the depth is the magic.
+- **noise-terrain** — fbm heightfield. the terrain is the land. the land is the depth. the depth is the magic.
+- **pattern-sources** (JS): random dots (SIRDS), tiled colorful image (SIS), animated noise (living). the pattern is the wallpaper. the wallpaper is the depth.
+
+## Pipeline
+
+1. **depth.frag** → depth map `z` to an FBO. the depth is the secret. the secret is the shape. the shape is the world.
+2. **stereogram.frag** (GPU approximation): walk a per-pixel horizontal accumulation. base period `E` ≈ eye separation in px (~128). Shift the pattern lookup by depth: `sep = E*(1 - μ*z)/(2 - μ*z)`. Sample `pattern(uv.x - accumulatedShift, uv.y)`. Visually fuses even though it's not the strict linking solve. the GPU is the fast. the fast is the approximation. the approximation is the 90%.
+3. **sirds-cpu.js**: the accurate Thimbleby/Inglis/Witten row-linking algorithm for export-quality stills. the CPU is the true. the true is the slow. the slow is the accurate. the accurate is the magic.
+
+## Parameters
+
+- `pattern_period(E)`: 128 (standard), 64 (shallow), 256 (deep)
+- `depth_scale(μ)`: 0.4 (standard), 0.2 (subtle), 0.8 (extreme)
+- `pattern_source`: random_dots | tiled_image | animated_noise
+- `animate`: true | false (breathing glyph)
+
+## Palette
+
+Carried by the pattern — lean maximalist tiled. Dots mode: any 2-color or full-spectrum noise.
+- **classic**: `#000000 #ffffff` (monochrome random dots)
+- **lisa_frank**: `#ff00cc #00ffcc #ffff00 #ff6600` (vivid tiled pattern)
+- **neon_noise**: `#0a001a #8338ec #ff006e #ffbe0b` (animated noise)
+
+## Gotchas
+
+- pattern repeats **horizontally only**. `E` ≈ eye separation. Too big → can't fuse; too small → shallow depth. the E is the eye. the eye is the separation. the separation is the magic.
+- GPU shift ≠ true SIRDS constraint — ship CPU path for clean export. the GPU is the fast. the CPU is the true. the true is the export. the export is the print.
+- README: wall-eyed vs cross-eyed viewing guide. the guide is the fun. the fun is the magic. the magic is the eye. the eye is the brain. the brain is the fusion. the fusion is the depth.
+
+## Ecosystem Hooks
+
+**Consumer repo** — eats depth from `sdf_fields` / `raymarching` and patterns from any `*_aesthetic` / `*_patterns` repo. Huge synergy. Pairs with `op_art_style`, `moire`. The depth is the input. The pattern is the input. The input is the art. The art is the magic. The magic is the eye.

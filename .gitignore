@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build / export artifacts
+dist/
+build/
+*.png
+*.jpg
+*.jpeg
+!docs/**/*.png
+exports/
+
+# editor / os cruft
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# local serve caches
+.cache/
+.parcel-cache/
