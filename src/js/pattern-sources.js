@@ -17,11 +17,18 @@ const PALETTES = {
   neon_noise: ["#0a001a", "#8338ec", "#ff006e", "#ffbe0b"],
 };
 
+// Reuse one canvas across pattern builds. During animation the wallpaper is
+// regenerated every few frames; allocating a fresh canvas each time churns the
+// GC and causes stutter. Only one pattern is ever live at a time, so sharing is
+// safe (assigning width/height also clears it).
+let sharedCanvas = null;
 function makeCanvas(w, h) {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  return c;
+  if (!sharedCanvas) sharedCanvas = document.createElement("canvas");
+  if (sharedCanvas.width !== w || sharedCanvas.height !== h) {
+    sharedCanvas.width = w;
+    sharedCanvas.height = h;
+  }
+  return sharedCanvas;
 }
 
 function pickWeighted(colors, rng) {

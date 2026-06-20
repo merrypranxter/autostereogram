@@ -59,10 +59,8 @@ export function generateSIRDS(depth, opts = {}) {
       if (left >= 0 && right < width) {
         // visibility test: is the link occluded by something nearer?
         let visible = true;
-        const t = 1; // step
         for (let xt = 1; xt < sep; xt++) {
           const zt = depth[y * width + (x - Math.floor(sep / 2) + xt)] || 0;
-          const zCmp = z;
           // a nearer surface between the two eyes hides this link
           const sepT = separation(zt, E, mu);
           if (sepT < sep && Math.abs(xt - sep / 2) < (sep - sepT) / 2) {

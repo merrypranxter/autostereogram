@@ -31,7 +31,9 @@ const AESTHETIC_DEFAULTS = {
 };
 
 const canvas = document.getElementById("gl");
-const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true });
+// export reads from the depth FBO via readPixels, not the drawing buffer, so we
+// don't need preserveDrawingBuffer — leaving it off lets the driver swap freely.
+const gl = canvas.getContext("webgl2");
 if (!gl) {
   document.body.innerHTML =
     '<p style="color:#fff;font-family:monospace;padding:2rem">WebGL2 not available. the eye needs the GPU. try a current browser.</p>';
@@ -77,6 +79,14 @@ function program(fragSrc) {
   if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
     throw new Error("link: " + gl.getProgramInfoLog(p));
   }
+  // cache all active uniform locations once at link time — querying every frame
+  // with gl.getUniformLocation is synchronous and slow.
+  p.uniforms = {};
+  const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) {
+    const info = gl.getActiveUniform(p, i);
+    p.uniforms[info.name] = gl.getUniformLocation(p, info.name);
+  }
   return p;
 }
 
@@ -96,12 +106,13 @@ function makeFBO(w, h) {
 }
 
 function setCommonUniforms(p) {
-  gl.uniform2f(gl.getUniformLocation(p, "uResolution"), canvas.width, canvas.height);
-  gl.uniform1f(gl.getUniformLocation(p, "uTime"), (performance.now() - t0) / 1000);
-  gl.uniform1f(gl.getUniformLocation(p, "uShapeId"), state.shapeId);
-  gl.uniform1f(gl.getUniformLocation(p, "uAnimate"), state.animate ? 1 : 0);
-  gl.uniform1f(gl.getUniformLocation(p, "uE"), state.E);
-  gl.uniform1f(gl.getUniformLocation(p, "uMu"), state.mu);
+  const u = p.uniforms;
+  if (u.uResolution) gl.uniform2f(u.uResolution, canvas.width, canvas.height);
+  if (u.uTime) gl.uniform1f(u.uTime, (performance.now() - t0) / 1000);
+  if (u.uShapeId) gl.uniform1f(u.uShapeId, state.shapeId);
+  if (u.uAnimate) gl.uniform1f(u.uAnimate, state.animate ? 1 : 0);
+  if (u.uE) gl.uniform1f(u.uE, state.E);
+  if (u.uMu) gl.uniform1f(u.uMu, state.mu);
 }
 
 // fullscreen triangle
@@ -148,11 +159,22 @@ async function init() {
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = Math.floor(canvas.clientWidth * dpr);
-  const h = Math.floor(canvas.clientHeight * dpr);
+  // clamp to >=1 so a hidden / zero-size canvas doesn't trigger WebGL errors
+  const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+  const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
   if (canvas.width === w && canvas.height === h && depthFbo) return;
   canvas.width = w;
   canvas.height = h;
+  // release the previous FBOs/textures before reallocating — otherwise each
+  // resize leaks GPU memory and can eventually lose the context.
+  if (depthFbo) {
+    gl.deleteFramebuffer(depthFbo.fbo);
+    gl.deleteTexture(depthFbo.tex);
+  }
+  if (sceneFbo) {
+    gl.deleteFramebuffer(sceneFbo.fbo);
+    gl.deleteTexture(sceneFbo.tex);
+  }
   depthFbo = makeFBO(w, h);
   sceneFbo = makeFBO(w, h);
 }
@@ -208,14 +230,15 @@ function renderStereogram() {
   gl.viewport(0, 0, canvas.width, canvas.height);
   setCommonUniforms(stereoProgram);
 
+  const u = stereoProgram.uniforms;
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, depthFbo.tex);
-  gl.uniform1i(gl.getUniformLocation(stereoProgram, "uDepthTex"), 0);
+  gl.uniform1i(u.uDepthTex, 0);
 
   gl.activeTexture(gl.TEXTURE1);
   gl.bindTexture(gl.TEXTURE_2D, patternTex);
-  gl.uniform1i(gl.getUniformLocation(stereoProgram, "uPatternTex"), 1);
-  gl.uniform1f(gl.getUniformLocation(stereoProgram, "uPatternAspect"), patternAspect);
+  gl.uniform1i(u.uPatternTex, 1);
+  gl.uniform1f(u.uPatternAspect, patternAspect);
 
   drawFullscreen();
 }
@@ -227,8 +250,8 @@ function renderPost() {
   setCommonUniforms(postProgram);
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, sceneFbo.tex);
-  gl.uniform1i(gl.getUniformLocation(postProgram, "uSceneTex"), 0);
-  gl.uniform1f(gl.getUniformLocation(postProgram, "uShowGuides"), state.guides ? 1 : 0);
+  gl.uniform1i(postProgram.uniforms.uSceneTex, 0);
+  gl.uniform1f(postProgram.uniforms.uShowGuides, state.guides ? 1 : 0);
   drawFullscreen();
 }
 
@@ -278,10 +301,12 @@ function exportTrueSIRDS() {
   out.getContext("2d").putImageData(img, 0, 0);
   out.toBlob((blob) => {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    a.href = url;
     a.download = `autostereogram-${state.engine}-${state.pattern}-E${state.E}.png`;
     a.click();
-    URL.revokeObjectURL(a.href);
+    // defer revocation — revoking immediately can cancel the async download
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 }
 
