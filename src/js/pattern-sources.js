@@ -1,13 +1,14 @@
 // pattern-sources.js
 // the pattern is the wallpaper. the wallpaper is the depth. the depth is the magic.
 //
-// Produces a single horizontally-tileable wallpaper tile of width `E` pixels.
+// Produces a single horizontally‑tileable wallpaper tile of width `E` pixels.
 // The tile is sampled with REPEAT wrap in stereogram.frag (GPU) and read
-// directly by sirds-cpu.js (export). Three sources:
+// directly by sirds‑cpu.js (export). Four sources:
 //
 //   random_dots    — monochrome classic SIRDS noise
-//   tiled_image    — vivid SIS texture (lisa_frank_aesthetic by default)
+//   tiled_image    — vivid SIS texture (lisa_frank aesthetic by default)
 //   animated_noise — living neon noise, reseeded per frame when animating
+//   stripes        — bold vertical stripes cycling through the chosen palette
 //
 // Each builder returns an HTMLCanvasElement of size (E x tileHeight).
 
@@ -47,7 +48,7 @@ function mulberry32(seed) {
   };
 }
 
-// random_dots: per-pixel 2-color noise. the dots are the noise.
+// random_dots: per‑pixel 2‑color noise. the dots are the noise.
 export function randomDots(E, tileHeight, { palette = "classic", seed = 1, density = 0.5 } = {}) {
   const colors = PALETTES[palette] || PALETTES.classic;
   const canvas = makeCanvas(E, tileHeight);
@@ -97,7 +98,7 @@ export function tiledImage(E, tileHeight, { palette = "lisa_frank", seed = 7 } =
   return canvas;
 }
 
-// animated_noise: neon noise reseeded per frame -> the living wallpaper.
+// animated_noise: neon noise reseeded per frame → the living wallpaper.
 export function animatedNoise(E, tileHeight, { palette = "neon_noise", seed = 1, frame = 0 } = {}) {
   return randomDots(E, tileHeight, {
     palette,
@@ -106,12 +107,30 @@ export function animatedNoise(E, tileHeight, { palette = "neon_noise", seed = 1,
   });
 }
 
+// stripes: bold vertical stripes cycling through the chosen palette.
+// Each stripe spans a configurable width (default 8px) and wraps across the tile edge.
+export function stripes(E, tileHeight, { palette = "classic", seed = 1, stripeWidth = 8 } = {}) {
+  const colors = PALETTES[palette] || PALETTES.classic;
+  const canvas = makeCanvas(E, tileHeight);
+  const ctx = canvas.getContext("2d");
+  const rng = mulberry32(seed);
+  // determine number of stripes across the tile; ensures full coverage
+  for (let x = 0; x < E; x += stripeWidth) {
+    const color = colors[Math.floor(rng() * colors.length)];
+    ctx.fillStyle = color;
+    ctx.fillRect(x, 0, Math.min(stripeWidth, E - x), tileHeight);
+  }
+  return canvas;
+}
+
 export function buildPattern(source, E, tileHeight, opts = {}) {
   switch (source) {
     case "tiled_image":
       return tiledImage(E, tileHeight, opts);
     case "animated_noise":
       return animatedNoise(E, tileHeight, opts);
+    case "stripes":
+      return stripes(E, tileHeight, opts);
     case "random_dots":
     default:
       return randomDots(E, tileHeight, opts);
