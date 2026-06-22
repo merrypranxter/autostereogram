@@ -10,7 +10,7 @@
 import { buildPattern } from "./pattern-sources.js";
 import { generateSIRDS } from "./sirds-cpu.js";
 
-const DEPTH_ENGINES = ["sdf-shape", "raymarch-depth", "noise-terrain"];
+const DEPTH_ENGINES = ["sdf-shape", "raymarch-depth", "noise-terrain", "wave-depth"];
 
 const state = {
   engine: "sdf-shape",
